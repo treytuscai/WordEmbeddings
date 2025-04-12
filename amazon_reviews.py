@@ -302,7 +302,21 @@ def get_most_similar_words(k, word_str, all_embeddings, word_str2int, eps=1e-10)
     https://www.tensorflow.org/api_docs/python/tf/math/top_k
     -
     '''
-    pass
+    # Get the embedding for the query word
+    query_index = word_str2int[word_str]
+    query_embedding = all_embeddings[query_index]  # shape (H,)
+
+    #  Compute cosine similarity with all embeddings
+    dot_products = tf.linalg.matvec(all_embeddings, query_embedding)  # shape (M,)
+    query_norm = tf.norm(query_embedding) + eps
+    all_norms = tf.norm(all_embeddings, axis=1) + eps
+    cosine_similarities = dot_products / (query_norm * all_norms)  # shape (M,)
+
+    # Use top_k to find top k+1 (including the query word itself)
+    top_k_values, top_k_indices = tf.math.top_k(cosine_similarities, k=k+1)
+
+    return top_k_indices.numpy(), top_k_values.numpy()
+
 
 
 def find_unique_word_counts(corpus, sort_by_count=True):
