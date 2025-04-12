@@ -91,6 +91,7 @@ class CBOW(network.DeepNetwork):
         '''
         N = x.shape[0]
         num_batch_iters = int(np.ceil(N / batch_size))
+        self.set_layer_training_mode(True)
         train_loss_hist = []
         rng = np.random.default_rng(seed=12) # Set random seed
 
@@ -100,7 +101,7 @@ class CBOW(network.DeepNetwork):
 
             for _ in range(num_batch_iters):
                 # Sample mini-batch indices with replacement
-                indices = rng.choice(N, size=(batch_size,), replace=True)
+                indices = tf.convert_to_tensor(rng.choice(N, size=(batch_size,), replace=True), dtype=tf.int32)
 
                 # Fetch batch samples
                 x_batch, y_batch = tf.gather(x, indices), tf.gather(y, indices)
