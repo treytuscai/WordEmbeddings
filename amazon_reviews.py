@@ -229,8 +229,24 @@ def make_target_context_word_lists(corpus, word2ind, context_win_sz=2):
     edge effects.
     - The length of target_words_int and context_words_int MUST be equal!
     '''
-    pass
+    target_words = []
+    context_words = []
 
+    for sentence in corpus:
+        sentence_len = len(sentence)
+        for i, target_word in enumerate(sentence):
+            target_idx = word2ind[target_word]
+
+            start = max(i - context_win_sz, 0)
+            end = min(sentence_len, i + context_win_sz + 1)
+
+            for j in range(start, end):
+                if j != i:
+                    context_idx = word2ind[sentence[j]]
+                    target_words.append(target_idx)
+                    context_words.append(context_idx)
+
+    return tf.constant(target_words, dtype=tf.int32), tf.constant(context_words, dtype=tf.int32)
 
 def get_dataset_word2vec(N_reviews=40000, verbose=False):
     '''Gets and preprocesses the Amazon Fashion Reviews dataset appropriately for training the CBOW neural network.
@@ -252,8 +268,11 @@ def get_dataset_word2vec(N_reviews=40000, verbose=False):
     Python list of str.
         The vocabulary / list of unique words in the corpus.
     '''
-    pass
-
+    corpus, _, _ = make_corpus(N_reviews=N_reviews, verbose=verbose)
+    vocab = find_unique_words(corpus=corpus)
+    word2ind = make_word2ind_mapping(vocab=vocab)
+    target_words, context_words = make_target_context_word_lists(corpus=corpus, word2ind=word2ind)
+    return target_words, context_words, vocab
 
 def get_most_similar_words(k, word_str, all_embeddings, word_str2int, eps=1e-10):
     '''Get the `k` words to the word `word_str` that have the most similar embeddings in `all_embeddings`.
