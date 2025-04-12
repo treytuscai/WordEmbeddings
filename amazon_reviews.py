@@ -110,9 +110,39 @@ def make_corpus(N_reviews, min_sent_size=2, max_sent_len=30, verbose=False):
     4. Make sure only sentences get added to the corpus that are above the min length and prune sentences that are too
     long.
     '''
-    pass
+    # Load reviews and ratings
+    reviews, ratings = load_reviews_and_ratings(N_reviews=N_reviews)
 
+    corpus = [] # The corpus represented as: [[<sentence>], [<sentence>], ...], where <sentence> = [<word>, <word>, ...].
+    corpus_ratings = [] # The star rating of the review associated with each sentence in the corpus.
+    corpus_review_ids = [] # The review ID associated with each sentence in the corpus.
 
+    for review_idx, (review, rating) in enumerate(zip(reviews, ratings)):
+        # Split the review into sentences by "."
+        raw_sentences = review.split(".")
+
+        for raw_sentence in raw_sentences:
+            # Tokenize
+            tokens = tokenize_words(raw_sentence.strip())
+
+            # Enforce min and max
+            if len(tokens) < min_sent_size:
+                continue
+            if len(tokens) > max_sent_len:
+                tokens = tokens[:max_sent_len]
+            
+            corpus.append(tokens)
+            corpus_ratings.append(rating)
+            corpus_review_ids.append(review_idx)
+
+            if verbose:
+                print(f"Review: {review_idx}\nRating: {rating}\nTokens: {tokens}")
+
+    # Convert to numpy arrays
+    corpus_ratings = np.array(corpus_ratings, dtype=np.float32)
+    corpus_review_ids = np.array(corpus_review_ids, dtype=np.int32)
+    
+    return corpus, corpus_ratings, corpus_review_ids      
 
 def find_unique_words(corpus):
     '''Define the vocabulary in the corpus (unique words). Finds and returns a list of the unique words in the corpus.
@@ -127,7 +157,7 @@ def find_unique_words(corpus):
     Python list of str.
         List of unique words in the corpus.
     '''
-    pass
+    return list(dict.fromkeys(word for sentence in corpus for word in sentence))
 
 
 def make_word2ind_mapping(vocab):
@@ -143,7 +173,7 @@ def make_word2ind_mapping(vocab):
     -----------
     Python dictionary. key,value pairs: str,int
     '''
-    pass
+    return {word: idx for idx, word in enumerate(vocab)}
 
 
 def make_ind2word_mapping(vocab):
@@ -159,7 +189,7 @@ def make_ind2word_mapping(vocab):
     -----------
     Python dictionary with key,value pairs: int,str
     '''
-    pass
+    return {idx: word for idx, word in enumerate(vocab)}
 
 
 def make_target_context_word_lists(corpus, word2ind, context_win_sz=2):
