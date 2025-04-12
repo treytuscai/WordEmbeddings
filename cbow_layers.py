@@ -1,6 +1,6 @@
 '''cbow_layers.py
 New neural network layers used for the CBOW Network
-YOUR NAMES HERE
+Trey Tuscai and Gordon Doore
 CS444: Deep Learning
 Project 3: Word Embeddings
 '''
@@ -29,7 +29,13 @@ class DenseEmbedding(layers.Dense):
         You should only need to call and pass in relevant information into the superclass constructor to implement this
         method.
         '''
-        pass
+        super().__init__(name=name,
+                         units=units,
+                         activation='linear',
+                         prev_layer_or_block=prev_layer_or_block,
+                         wt_init='he',
+                         do_batch_norm=False,
+                         do_layer_norm=False)
 
     def compute_net_input(self, x):
         '''Computes the net input for the current DenseEmbedding layer.
@@ -55,3 +61,4 @@ class DenseEmbedding(layers.Dense):
             # Special case to only handle lazy wt/bias initialization during net compile
             return x @ self.wts + self.b
 
+        return tf.gather(self.wts, x) + self.b
