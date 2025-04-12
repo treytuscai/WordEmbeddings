@@ -34,7 +34,7 @@ class DenseEmbedding(layers.Dense):
                          activation='linear',
                          prev_layer_or_block=prev_layer_or_block,
                          wt_init='he',
-                         do_batch_norm=False,
+                         do_batch_norm=True,
                          do_layer_norm=False)
 
     def compute_net_input(self, x):

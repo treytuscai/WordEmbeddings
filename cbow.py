@@ -125,11 +125,13 @@ class CBOW(network.DeepNetwork):
 
     def get_word_embedding(self, wordind):
         '''Given the word index `wordind` retrieve and return the corresponding embedding vector.'''
-        pass
+        embedding = self.hidden.wts[wordind]
+        return embedding
 
     def get_all_embeddings(self):
         '''Retrieve and return the embedding vectors for ALL words in the vocab.'''
-        pass
+        all_embeddings = self.hidden.wts
+        return all_embeddings
 
     def save_embeddings(self, path='export', filename='embeddings.npz'):
         '''Saves the embeddings to disk.
