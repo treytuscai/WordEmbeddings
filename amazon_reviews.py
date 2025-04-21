@@ -113,9 +113,12 @@ def make_corpus(N_reviews, min_sent_size=2, max_sent_len=30, verbose=False):
     # Load reviews and ratings
     reviews, ratings = load_reviews_and_ratings(N_reviews=N_reviews)
 
-    corpus = [] # The corpus represented as: [[<sentence>], [<sentence>], ...], where <sentence> = [<word>, <word>, ...].
-    corpus_ratings = [] # The star rating of the review associated with each sentence in the corpus.
-    corpus_review_ids = [] # The review ID associated with each sentence in the corpus.
+    # The corpus represented as: [[<sentence>], [<sentence>], ...], where <sentence> = [<word>, <word>, ...].
+    corpus = []
+    # The star rating of the review associated with each sentence in the corpus.
+    corpus_ratings = []
+    # The review ID associated with each sentence in the corpus.
+    corpus_review_ids = []
 
     for review_idx, (review, rating) in enumerate(zip(reviews, ratings)):
         # Split the review into sentences by "."
@@ -130,19 +133,21 @@ def make_corpus(N_reviews, min_sent_size=2, max_sent_len=30, verbose=False):
                 continue
             if len(tokens) > max_sent_len:
                 tokens = tokens[:max_sent_len]
-            
+
             corpus.append(tokens)
             corpus_ratings.append(rating)
             corpus_review_ids.append(review_idx)
 
             if verbose:
-                print(f"Review: {review_idx}\nRating: {rating}\nTokens: {tokens}")
+                print(
+                    f"Review: {review_idx}\nRating: {rating}\nTokens: {tokens}")
 
     # Convert to numpy arrays
     corpus_ratings = np.array(corpus_ratings, dtype=np.float32)
     corpus_review_ids = np.array(corpus_review_ids, dtype=np.int32)
-    
-    return corpus, corpus_ratings, corpus_review_ids      
+
+    return corpus, corpus_ratings, corpus_review_ids
+
 
 def find_unique_words(corpus):
     '''Define the vocabulary in the corpus (unique words). Finds and returns a list of the unique words in the corpus.
@@ -248,6 +253,7 @@ def make_target_context_word_lists(corpus, word2ind, context_win_sz=2):
 
     return tf.constant(target_words, dtype=tf.int32), tf.constant(context_words, dtype=tf.int32)
 
+
 def get_dataset_word2vec(N_reviews=40000, verbose=False):
     '''Gets and preprocesses the Amazon Fashion Reviews dataset appropriately for training the CBOW neural network.
     This is a wrapper function to automate the functions you have already written.
@@ -271,8 +277,10 @@ def get_dataset_word2vec(N_reviews=40000, verbose=False):
     corpus, _, _ = make_corpus(N_reviews=N_reviews, verbose=verbose)
     vocab = find_unique_words(corpus=corpus)
     word2ind = make_word2ind_mapping(vocab=vocab)
-    target_words, context_words = make_target_context_word_lists(corpus=corpus, word2ind=word2ind)
+    target_words, context_words = make_target_context_word_lists(
+        corpus=corpus, word2ind=word2ind)
     return target_words, context_words, vocab
+
 
 def get_most_similar_words(k, word_str, all_embeddings, word_str2int, eps=1e-10):
     '''Get the `k` words to the word `word_str` that have the most similar embeddings in `all_embeddings`.
@@ -307,7 +315,8 @@ def get_most_similar_words(k, word_str, all_embeddings, word_str2int, eps=1e-10)
     query_embedding = all_embeddings[query_index]  # shape (H,)
 
     #  Compute cosine similarity with all embeddings
-    dot_products = tf.linalg.matvec(all_embeddings, query_embedding)  # shape (M,)
+    dot_products = tf.linalg.matvec(
+        all_embeddings, query_embedding)  # shape (M,)
     query_norm = tf.norm(query_embedding) + eps
     all_norms = tf.norm(all_embeddings, axis=1) + eps
     cosine_similarities = dot_products / (query_norm * all_norms)  # shape (M,)
@@ -316,7 +325,6 @@ def get_most_similar_words(k, word_str, all_embeddings, word_str2int, eps=1e-10)
     top_k_values, top_k_indices = tf.math.top_k(cosine_similarities, k=k+1)
 
     return top_k_indices.numpy(), top_k_values.numpy()
-
 
 
 def find_unique_word_counts(corpus, sort_by_count=True):
@@ -350,3 +358,115 @@ def find_unique_word_counts(corpus, sort_by_count=True):
                                                               reverse=True)}
 
     return unique_word_counts
+
+
+def make_corpus_wo_stop(N_reviews, stop_words, min_sent_size=2, max_sent_len=30, verbose=False):
+    '''Make the text corpus of the Amazon Fashion Reviews dataset.
+
+    Transforms text documents (list of strings) into a list of list of words (both Python lists).
+    The format is [[<sentence>], [<sentence>], ...], where <sentence> = [<word>, <word>, ...].
+
+    For the Amazon data, this transforms a list of reviews (each is a single string) into a list of
+    sentences, where each sentence is represented as a list of string words. So the elements of the
+    resulting list are the i-th sentence overall. Because we lose information about which review the
+    sentence comes from, we maintain a separate list that keeps track of the review number (index) from
+    which the current sentence originates.
+
+    Parameters:
+    -----------
+    N_reviews: int.
+        Number of reviews to load from the file.
+    min_sent_size: int.
+        Don't add sentences LESS THAN this number of words to the corpus (skip over them). This is important because it
+        removes empty sentences (bad parsing) and those with not enough word context.
+    max_sent_len: int.
+        If a sentence is equal or longer than this length, we trim the sentence down so it is `max_sent_len` words long
+        before adding it to the corpus. This is important because it prevents the content of a very long from dominating
+        the corpus.
+    verbose: bool.
+        If False, turn off all debug print outs.
+
+    Returns:
+    -----------
+    Python list of str.
+        The corpus represented as: [[<sentence>], [<sentence>], ...], where <sentence> = [<word>, <word>, ...].
+    ndarray of np.float32.
+        The star rating of the review associated with each sentence in the corpus.
+        Example: 1st review is 3.5 stars and has 3 sentences. The ratings returned would be: [3.5, 3.5, 3.5, ...].
+    ndarray of np.int32.
+        The review ID associated with each sentence in the corpus.
+        Example: 1st review is 3.5 stars and has 3 sentences. The review IDs returned would be: [0, 0, 0, ...].
+
+    TODO:
+    1. Load in the requested number of reviews and ratings.
+    2. Split each review into sentences based on periods.
+    3. Tokenize the sentence into individual word strings (via provided tokenize_words function).
+    4. Make sure only sentences get added to the corpus that are above the min length and prune sentences that are too
+    long.
+    '''
+    # Load reviews and ratings
+    reviews, ratings = load_reviews_and_ratings(N_reviews=N_reviews)
+
+    # The corpus represented as: [[<sentence>], [<sentence>], ...], where <sentence> = [<word>, <word>, ...].
+    corpus = []
+    # The star rating of the review associated with each sentence in the corpus.
+    corpus_ratings = []
+    # The review ID associated with each sentence in the corpus.
+    corpus_review_ids = []
+
+    for review_idx, (review, rating) in enumerate(zip(reviews, ratings)):
+        # Split the review into sentences by "."
+        raw_sentences = review.split(".")
+
+        for raw_sentence in raw_sentences:
+            # Tokenize
+            tokens = tokenize_words(raw_sentence.strip())
+            tokens = [token for token in tokens if token not in stop_words]
+            # Enforce min and max
+            if len(tokens) < min_sent_size:
+                continue
+            if len(tokens) > max_sent_len:
+                tokens = tokens[:max_sent_len]
+
+            corpus.append(tokens)
+            corpus_ratings.append(rating)
+            corpus_review_ids.append(review_idx)
+
+            if verbose:
+                print(
+                    f"Review: {review_idx}\nRating: {rating}\nTokens: {tokens}")
+
+    # Convert to numpy arrays
+    corpus_ratings = np.array(corpus_ratings, dtype=np.float32)
+    corpus_review_ids = np.array(corpus_review_ids, dtype=np.int32)
+
+    return corpus, corpus_ratings, corpus_review_ids
+
+
+def get_dataset_word2vec_wo(stop_words, N_reviews=40000, verbose=False):
+    '''Gets and preprocesses the Amazon Fashion Reviews dataset appropriately for training the CBOW neural network.
+    This is a wrapper function to automate the functions you have already written.
+
+    Parameters:
+    -----------
+    N_reviews: int.
+        Number of reviews to load from the file.
+    verbose: bool.
+        If False, turn off all debug print outs.
+
+    Returns:
+    --------
+    tf.constant. tf.int32s. shape=(N,).
+        The int-coded target words in the corpus.
+    tf.constant. tf.int32s. shape=(N,).
+        The int-coded context words.
+    Python list of str.
+        The vocabulary / list of unique words in the corpus.
+    '''
+    corpus, _, _ = make_corpus_wo_stop(
+        stop_words=stop_words, N_reviews=N_reviews, verbose=verbose)
+    vocab = find_unique_words(corpus=corpus)
+    word2ind = make_word2ind_mapping(vocab=vocab)
+    target_words, context_words = make_target_context_word_lists(
+        corpus=corpus, word2ind=word2ind)
+    return target_words, context_words, vocab
