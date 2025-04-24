@@ -420,6 +420,7 @@ def make_corpus_wo_stop(N_reviews, stop_words, min_sent_size=2, max_sent_len=30,
 
         for raw_sentence in raw_sentences:
             # Tokenize
+            # REMOVE STOP WORDS
             tokens = tokenize_words(raw_sentence.strip())
             tokens = [token for token in tokens if token not in stop_words]
             # Enforce min and max
